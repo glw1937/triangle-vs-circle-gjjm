@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>삼각형 피하기 게임 (점수, 버튼, 배경음악)</title>
+  <style>
+    body {
+      text-align: center;
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      margin: 0; padding: 20px;
+    }
+    canvas {
+      background: #ffffff;
+      display: block;
+      margin: 20px auto;
+      border: 2px solid #000;
+    }
+    button {
+      margin: 5px;
+      font-size: 18px;
+      padding: 8px 20px;
+      cursor: pointer;
+    }
+    #score {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>삼각형 피하기 게임</h1>
+  <div>
+    <button id="startBtn">게임 시작</button>
+    <button id="restartBtn" disabled>재시작</button>
+  </div>
+  <div id="score">점수: 0</div>
+  <canvas id="gameCanvas" width="480" height="640"></canvas>
+
+  <!-- 배경음악 (링크 자유롭게 바꿔도 됨) -->
+  <audio id="bgm" loop>
+    <source src="https://cdn.pixabay.com/download/audio/2022/03/28/audio_4eb38e39ae.mp3?filename=upbeat-pop-11288.mp3" type="audio/mpeg" />
+    브라우저가 오디오 태그를 지원하지 않습니다.
+  </audio>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+
+    const startBtn = document.getElementById("startBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const scoreDisplay = document.getElementById("score");
+    const bgm = document.getElementById("bgm");
+
+    const player = {
+      x: WIDTH / 2,
+      y: HEIGHT - 40,
+      radius: 20,
+      speed: 5,
+      moveLeft: false,
+      moveRight: false,
+    };
+
+    const enemySize = 30;
+    const enemySpeed = 3;
+    const enemyCount = 5;
+    let enemies = [];
+
+    let running = false;
+    let score = 0;
+    let gameStartTime = 0;
+
+    document.addEventListener("keydown", (e) => {
+      if (!running) return;
+      if (e.key === "ArrowLeft") player.moveLeft = true;
+      if (e.key === "ArrowRight") player.moveRight = true;
+    });
+
+    document.addEventListener("keyup", (e) => {
+      if (!running) return;
+      if (e.key === "ArrowLeft") player.moveLeft = false;
+      if (e.key === "ArrowRight") player.moveRight = false;
+    });
+
+    function createEnemies() {
+      enemies = [];
+      for (let i = 0; i < enemyCount; i++) {
+        enemies.push({
+          x: Math.random() * (WIDTH - enemySize),
+          y: Math.random() * -HEIGHT,
+        });
+      }
+    }
+
+    function drawTriangle(x, y, size) {
+      ctx.fillStyle = "red";
+      ctx.beginPath();
+      ctx.moveTo(x + size / 2, y);
+      ctx.lineTo(x, y + size);
+      ctx.lineTo(x + size, y + size);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function isCollision(circle, triangle) {
+      const dx = circle.x - (triangle.x + enemySize / 2);
+      const dy = circle.y - (triangle.y + enemySize / 2);
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      return distance < circle.radius + enemySize / 2;
+    }
+
+    function resetGame() {
+      player.x = WIDTH / 2;
+      player.moveLeft = false;
+      player.moveRight = false;
+      score = 0;
+      gameStartTime = performance.now();
+      createEnemies();
+      scoreDisplay.textContent = `점수: ${score}`;
+    }
+
+    function updateScore() {
+      const elapsedSeconds = Math.floor((performance.now() - gameStartTime) / 1000);
+      score = Math.floor(elapsedSeconds / 10);
+      scoreDisplay.textContent = `점수: ${score}`;
+    }
+
+    function gameLoop() {
+      if (!running) return;
+
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      if (player.moveLeft) player.x -= player.speed;
+      if (player.moveRight) player.x += player.speed;
+      player.x = Math.max(player.radius, Math.min(WIDTH - player.radius, player.x));
+
+      ctx.fillStyle = "blue";
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      for (let enemy of enemies) {
+        enemy.y += enemySpeed;
+
+        drawTriangle(enemy.x, enemy.y, enemySize);
+
+        if (isCollision(player, enemy)) {
+          running = false;
+          bgm.pause();
+          alert("게임 오버! 점수: " + score);
+          restartBtn.disabled = false;
+          startBtn.disabled = false;
+          return;
+        }
+
+        if (enemy.y > HEIGHT) {
+          enemy.y = Math.random() * -200;
+          enemy.x = Math.random() * (WIDTH - enemySize);
+        }
+      }
+
+      updateScore();
+      requestAnimationFrame(gameLoop);
+    }
+
+    startBtn.addEventListener("click", () => {
+      if (!running) {
+        running = true;
+        resetGame();
+        bgm.currentTime = 0;
+        bgm.play();
+        startBtn.disabled = true;
+        restartBtn.disabled = true;
+        gameLoop();
+      }
+    });
+
+    restartBtn.addEventListener("click", () => {
+      if (!running) {
+        running = true;
+        resetGame();
+        bgm.currentTime = 0;
+        bgm.play();
+        startBtn.disabled = true;
+        restartBtn.disabled = true;
+        gameLoop();
+      }
+    });
+  </script>
+
+</body>
+</html>
